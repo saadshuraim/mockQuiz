@@ -1,0 +1,57 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Play } from "lucide-react";
+import { Link } from "wouter";
+
+interface QuizCardProps {
+  id: string;
+  title: string;
+  description?: string;
+  questionCount: number;
+  lastTaken?: number;
+}
+
+export default function QuizCard({ id, title, description, questionCount, lastTaken }: QuizCardProps) {
+  return (
+    <Card className="hover-elevate transition-all duration-200" data-testid={`card-quiz-${id}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <CardTitle className="font-heading text-xl text-foreground line-clamp-1">
+              {title}
+            </CardTitle>
+            {description && (
+              <CardDescription className="mt-1 line-clamp-2">{description}</CardDescription>
+            )}
+          </div>
+          <Badge variant="secondary" className="shrink-0">
+            {questionCount} {questionCount === 1 ? 'Q' : 'Qs'}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between gap-4">
+          {lastTaken && (
+            <p className="text-sm text-muted-foreground">
+              Last taken {new Date(lastTaken).toLocaleDateString()}
+            </p>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" asChild data-testid={`button-view-${id}`}>
+              <Link href={`/preview/${id}`}>
+                <BookOpen className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button size="sm" asChild data-testid={`button-start-${id}`}>
+              <Link href={`/quiz/${id}`}>
+                <Play className="h-4 w-4 mr-1" />
+                Start
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
