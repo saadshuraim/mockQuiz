@@ -1,46 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, ClipboardList, Award } from "lucide-react";
 import { Link } from "wouter";
+import { getQuizzes, getAttempts, getAttemptsByQuizId } from "@/utils/storage";
 import QuizCard from "@/components/QuizCard";
 import ResultCard from "@/components/ResultCard";
 import EmptyState from "@/components/EmptyState";
 
 export default function Dashboard() {
-  // todo: remove mock functionality - replace with localStorage
-  const [quizzes] = useState([
-    {
-      id: "1",
-      title: "JavaScript Fundamentals",
-      description: "Test your knowledge of core JavaScript concepts",
-      questionCount: 15,
-      lastTaken: Date.now() - 86400000 * 2,
-    },
-    {
-      id: "2",
-      title: "React Hooks",
-      description: "Deep dive into React hooks and their use cases",
-      questionCount: 10,
-      lastTaken: Date.now() - 86400000,
-    },
-  ]);
+  const [quizzes, setQuizzes] = useState(() => getQuizzes());
+  const [attempts, setAttempts] = useState(() => getAttempts());
 
-  const [results] = useState([
-    {
-      id: "1",
-      quizTitle: "JavaScript Fundamentals",
-      score: 12,
-      totalQuestions: 15,
-      finishedAt: Date.now() - 3600000,
-    },
-    {
-      id: "2",
-      quizTitle: "React Hooks",
-      score: 8,
-      totalQuestions: 10,
-      finishedAt: Date.now() - 86400000,
-    },
-  ]);
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setQuizzes(getQuizzes());
+      setAttempts(getAttempts());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const quizzesWithLastTaken = quizzes.map(quiz => {
+    const quizAttempts = getAttemptsByQuizId(quiz.id);
+    const lastAttempt = quizAttempts.sort((a, b) => b.finishedAt - a.finishedAt)[0];
+    return {
+      ...quiz,
+      questionCount: quiz.questions.length,
+      lastTaken: lastAttempt?.finishedAt,
+    };
+  });
+
+  const sortedAttempts = [...attempts].sort((a, b) => b.finishedAt - a.finishedAt).slice(0, 10);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -72,9 +69,9 @@ export default function Dashboard() {
               ({quizzes.length})
             </span>
           </div>
-          {quizzes.length > 0 ? (
+          {quizzesWithLastTaken.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quizzes.map((quiz) => (
+              {quizzesWithLastTaken.map((quiz) => (
                 <QuizCard key={quiz.id} {...quiz} />
               ))}
             </div>
@@ -96,13 +93,13 @@ export default function Dashboard() {
               Recent Results
             </h2>
             <span className="text-sm text-muted-foreground">
-              ({results.length})
+              ({sortedAttempts.length})
             </span>
           </div>
-          {results.length > 0 ? (
+          {sortedAttempts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {results.map((result) => (
-                <ResultCard key={result.id} {...result} />
+              {sortedAttempts.map((attempt) => (
+                <ResultCard key={attempt.id} {...attempt} />
               ))}
             </div>
           ) : (

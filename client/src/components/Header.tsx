@@ -27,12 +27,12 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/">
-          <a className="flex items-center gap-2 hover-elevate px-2 py-1 rounded-md transition-all" data-testid="link-home">
+          <button className="flex items-center gap-2 hover-elevate px-2 py-1 rounded-md transition-all" data-testid="link-home">
             <BookOpen className="h-6 w-6 text-primary" />
             <span className="font-heading font-bold text-xl text-foreground">
               MockQuiz
             </span>
-          </a>
+          </button>
         </Link>
         
         <Button

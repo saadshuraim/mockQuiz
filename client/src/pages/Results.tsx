@@ -1,49 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, RotateCcw } from "lucide-react";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
+import { getAttemptById, getQuizById } from "@/utils/storage";
 import ScoreSummary from "@/components/ScoreSummary";
 import QuestionReview from "@/components/QuestionReview";
 
 export default function Results() {
   const { attemptId } = useParams();
-  
-  // todo: remove mock functionality - load attempt from localStorage using attemptId
-  const [attempt] = useState({
-    id: attemptId,
-    quizId: "1",
-    quizTitle: "JavaScript Fundamentals",
-    score: 8,
-    totalQuestions: 10,
-    finishedAt: Date.now(),
-    answers: [
-      {
-        questionId: "q1",
-        question: "What is the primary purpose of React hooks?",
-        options: {
-          a: "To replace class components entirely",
-          b: "To allow state and lifecycle features in function components",
-          c: "To improve rendering performance",
-          d: "To handle routing in React applications",
-        },
-        userAnswer: "b",
-        correctAnswer: "b",
-        explanation: "Hooks allow you to use state and other React features in function components.",
-      },
-      {
-        questionId: "q2",
-        question: "Which hook is used for side effects?",
-        options: {
-          a: "useState",
-          b: "useContext",
-          c: "useEffect",
-          d: "useReducer",
-        },
-        userAnswer: "a",
-        correctAnswer: "c",
-        explanation: "useEffect is specifically designed for handling side effects in React.",
-      },
-    ],
+  const [, setLocation] = useLocation();
+  const [attempt, setAttempt] = useState(() => attemptId ? getAttemptById(attemptId) : null);
+  const [quiz, setQuiz] = useState(() => attempt ? getQuizById(attempt.quizId) : null);
+
+  useEffect(() => {
+    if (!attempt) {
+      setLocation("/");
+      return;
+    }
+    if (!quiz) {
+      const loadedQuiz = getQuizById(attempt.quizId);
+      setQuiz(loadedQuiz || null);
+    }
+  }, [attempt, quiz, setLocation]);
+
+  if (!attempt || !quiz) {
+    return null;
+  }
+
+  const answersWithDetails = attempt.answers.map(answer => {
+    const question = quiz.questions.find(q => q.id === answer.questionId);
+    return {
+      questionId: answer.questionId,
+      question: question?.question || '',
+      options: question?.options || {},
+      userAnswer: answer.selectedKey,
+      correctAnswer: question?.answer || '',
+      correctBool: answer.correctBool,
+      explanation: question?.explanation,
+    };
   });
 
   return (
@@ -61,7 +55,7 @@ export default function Results() {
           Question Review
         </h2>
         <div className="space-y-4">
-          {attempt.answers.map((answer, index) => (
+          {answersWithDetails.map((answer, index) => (
             <QuestionReview
               key={answer.questionId}
               question={answer.question}

@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Trash2, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { exportData, clearAllData } from "@/utils/storage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,37 +18,40 @@ import {
 
 export default function Settings() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const handleExport = () => {
-    // todo: remove mock functionality - implement actual localStorage export
-    const mockData = {
-      quizzes: [],
-      attempts: [],
-      exportedAt: new Date().toISOString(),
-    };
-    
-    const blob = new Blob([JSON.stringify(mockData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mockquiz_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Data exported",
-      description: "Your backup file has been downloaded",
-    });
+    try {
+      exportData();
+      toast({
+        title: "Data exported",
+        description: "Your backup file has been downloaded",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleClearData = () => {
-    // todo: remove mock functionality - implement actual localStorage clear
-    console.log("Clearing all data from localStorage");
-    toast({
-      title: "Data cleared",
-      description: "All quizzes and results have been deleted",
-      variant: "destructive",
-    });
+    try {
+      clearAllData();
+      toast({
+        title: "Data cleared",
+        description: "All quizzes and results have been deleted",
+        variant: "destructive",
+      });
+      setTimeout(() => setLocation("/"), 1000);
+    } catch (error) {
+      toast({
+        title: "Clear failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

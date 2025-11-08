@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect } from "react";
+import { QuizProvider } from "@/contexts/QuizContext";
 import Header from "@/components/Header";
 import Dashboard from "@/pages/Dashboard";
 import Upload from "@/pages/Upload";
@@ -41,13 +42,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="min-h-screen bg-background">
-          <Header />
-          <main>
-            <Router />
-          </main>
-        </div>
-        <Toaster />
+        <QuizProvider>
+          <div className="min-h-screen bg-background">
+            <Header />
+            <main>
+              <Router />
+            </main>
+          </div>
+          <Toaster />
+        </QuizProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

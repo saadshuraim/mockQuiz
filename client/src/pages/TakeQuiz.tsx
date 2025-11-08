@@ -1,48 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, CheckCircle } from "lucide-react";
 import { Link, useParams, useLocation } from "wouter";
+import { getQuizById, saveAttempt, AttemptAnswer } from "@/utils/storage";
 import QuizProgress from "@/components/QuizProgress";
 import QuestionCard from "@/components/QuestionCard";
 
 export default function TakeQuiz() {
   const { quizId } = useParams();
   const [, setLocation] = useLocation();
-  
-  // todo: remove mock functionality - load quiz from localStorage using quizId
-  const [quiz] = useState({
-    id: quizId,
-    title: "JavaScript Fundamentals",
-    questions: [
-      {
-        id: "q1",
-        question: "What is the primary purpose of React hooks?",
-        options: {
-          a: "To replace class components entirely",
-          b: "To allow state and lifecycle features in function components",
-          c: "To improve rendering performance",
-          d: "To handle routing in React applications",
-        },
-        answer: "b",
-        explanation: "Hooks allow you to use state and other React features in function components.",
-      },
-      {
-        id: "q2",
-        question: "Which hook is used for side effects?",
-        options: {
-          a: "useState",
-          b: "useContext",
-          c: "useEffect",
-          d: "useReducer",
-        },
-        answer: "c",
-        explanation: "useEffect is specifically designed for handling side effects in React.",
-      },
-    ],
-  });
-
+  const [quiz, setQuiz] = useState(() => quizId ? getQuizById(quizId) : null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    if (!quiz) {
+      setLocation("/");
+    }
+  }, [quiz, setLocation]);
+
+  if (!quiz) {
+    return null;
+  }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
@@ -64,9 +43,23 @@ export default function TakeQuiz() {
   };
 
   const handleFinish = () => {
-    console.log("Quiz finished with answers:", answers);
-    // todo: remove mock functionality - grade quiz, save attempt to localStorage, navigate to results
-    setLocation("/results/mock-attempt-id");
+    const attemptAnswers: AttemptAnswer[] = quiz.questions.map(question => ({
+      questionId: question.id,
+      selectedKey: answers[question.id] || '',
+      correctBool: answers[question.id] === question.answer,
+    }));
+
+    const score = attemptAnswers.filter(a => a.correctBool).length;
+
+    const attempt = saveAttempt({
+      quizId: quiz.id,
+      quizTitle: quiz.title,
+      score,
+      totalQuestions: quiz.questions.length,
+      answers: attemptAnswers,
+    });
+
+    setLocation(`/results/${attempt.id}`);
   };
 
   return (

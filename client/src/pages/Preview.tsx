@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,43 +6,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Save, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useQuiz } from "@/contexts/QuizContext";
+import { saveQuiz } from "@/utils/storage";
 import QuestionPreviewCard from "@/components/QuestionPreviewCard";
-import ParseErrorAlert from "@/components/ParseErrorAlert";
 
 export default function Preview() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { parsedQuestions, clearParsedQuestions } = useQuiz();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  
-  // todo: remove mock functionality - get actual parsed questions from state/context
-  const [questions] = useState([
-    {
-      id: "q1",
-      question: "What is the capital of France?",
-      options: {
-        a: "London",
-        b: "Paris",
-        c: "Berlin",
-        d: "Madrid",
-      },
-      answer: "b",
-      explanation: "Paris has been the capital of France since 987 AD.",
-    },
-    {
-      id: "q2",
-      question: "What is 2 + 2?",
-      options: {
-        a: "3",
-        b: "4",
-        c: "5",
-        d: "22",
-      },
-      answer: "b",
-    },
-  ]);
 
-  const [parseError] = useState<string | null>(null);
+  useEffect(() => {
+    if (parsedQuestions.length === 0) {
+      setLocation("/upload");
+    }
+  }, [parsedQuestions, setLocation]);
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -53,12 +33,28 @@ export default function Preview() {
       });
       return;
     }
-    console.log("Saving quiz:", { title, description, questions });
-    toast({
-      title: "Quiz saved!",
-      description: `"${title}" has been saved to your library`,
-    });
-    // todo: remove mock functionality - save to localStorage and navigate to dashboard
+
+    try {
+      const savedQuiz = saveQuiz({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        questions: parsedQuestions,
+      });
+      
+      toast({
+        title: "Quiz saved!",
+        description: `"${title}" has been saved to your library`,
+      });
+      
+      clearParsedQuestions();
+      setLocation("/");
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -80,12 +76,6 @@ export default function Preview() {
           Review your questions and add details before saving
         </p>
       </div>
-
-      {parseError && (
-        <div className="mb-6">
-          <ParseErrorAlert error={parseError} />
-        </div>
-      )}
 
       <Card className="mb-8">
         <CardHeader>
@@ -120,10 +110,10 @@ export default function Preview() {
 
       <div className="mb-8">
         <h2 className="font-heading text-2xl font-semibold text-foreground mb-4">
-          Questions ({questions.length})
+          Questions ({parsedQuestions.length})
         </h2>
         <div className="space-y-4">
-          {questions.map((question, index) => (
+          {parsedQuestions.map((question, index) => (
             <QuestionPreviewCard key={question.id} question={question} index={index} />
           ))}
         </div>

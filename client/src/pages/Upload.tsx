@@ -4,15 +4,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, FileUp, ClipboardPaste } from "lucide-react";
+import { useLocation } from "wouter";
+import { useQuiz } from "@/contexts/QuizContext";
+import { parseQuizText, parseQuizFile } from "@/utils/quizParser";
 import AiPromptHelper from "@/components/AiPromptHelper";
 import PasteTextArea from "@/components/PasteTextArea";
 import FileUploadZone from "@/components/FileUploadZone";
 
 export default function Upload() {
   const [pastedText, setPastedText] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const { setParsedQuestions } = useQuiz();
 
-  const handlePreviewPaste = () => {
+  const handlePreviewPaste = async () => {
     if (!pastedText.trim()) {
       toast({
         title: "No content",
@@ -21,21 +27,46 @@ export default function Upload() {
       });
       return;
     }
-    console.log("Parsing pasted text:", pastedText);
-    toast({
-      title: "Parsing...",
-      description: "Processing your quiz content",
-    });
-    // todo: remove mock functionality - implement actual parsing and navigation to /preview
+
+    setIsProcessing(true);
+    try {
+      const questions = await parseQuizText(pastedText);
+      setParsedQuestions(questions);
+      toast({
+        title: "Success!",
+        description: `Parsed ${questions.length} questions`,
+      });
+      setLocation("/preview");
+    } catch (error) {
+      toast({
+        title: "Parsing failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleFileSelect = (file: File) => {
-    console.log("File selected:", file.name);
-    toast({
-      title: "File uploaded",
-      description: `Processing ${file.name}...`,
-    });
-    // todo: remove mock functionality - implement file parsing and navigation to /preview
+  const handleFileSelect = async (file: File) => {
+    setIsProcessing(true);
+    try {
+      const questions = await parseQuizFile(file);
+      setParsedQuestions(questions);
+      toast({
+        title: "Success!",
+        description: `Parsed ${questions.length} questions from ${file.name}`,
+      });
+      setLocation("/preview");
+    } catch (error) {
+      toast({
+        title: "File parsing failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -77,9 +108,10 @@ export default function Upload() {
                 onClick={handlePreviewPaste} 
                 size="lg" 
                 className="w-full"
+                disabled={isProcessing}
                 data-testid="button-preview-paste"
               >
-                Preview Quiz
+                {isProcessing ? "Processing..." : "Preview Quiz"}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </CardContent>
