@@ -2,30 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
+/* UNIVERSITY THEME - LIGHT MODE */
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(0,0,0, .12);
+  --badge-outline: rgba(0,0,0, .06);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
+  --elevate-1: rgba(0,0,0, .04);
   --elevate-2: rgba(0,0,0, .08);
-  --background: 270 100% 99%;
-  --foreground: 258 60% 24%;
-  --border: 270 15% 90%;
+  /* Royal Blue base with gradient undertones */
+  --background: 220 100% 99%;
+  --foreground: 220 70% 20%;
+  --border: 220 20% 90%;
+  /* Clean white cards with subtle shadows */
   --card: 0 0% 100%;
-  --card-foreground: 258 60% 24%;
-  --card-border: 270 15% 92%;
-  --sidebar: 270 16% 94%;
-  --sidebar-foreground: 258 60% 24%;
-  --sidebar-border: 270 14% 88%;
-  --sidebar-primary: 174 84% 40%;
-  --sidebar-primary-foreground: 174 10% 98%;
-  --sidebar-accent: 270 14% 88%;
-  --sidebar-accent-foreground: 258 60% 24%;
-  --sidebar-ring: 174 84% 40%;
+  --card-foreground: 220 70% 20%;
+  --card-border: 220 15% 92%;
+  /* Energetic sidebar with university colors */
+  --sidebar: 220 30% 97%;
+  --sidebar-foreground: 220 70% 20%;
+  --sidebar-border: 220 20% 90%;
+  --sidebar-primary: 350 85% 45%;
+  --sidebar-primary-foreground: 350 10% 98%;
+  --sidebar-accent: 220 85% 45%;
+  --sidebar-accent-foreground: 220 10% 98%;
+  --sidebar-ring: 350 85% 45%;
+  /* Clean popover elements */
   --popover: 0 0% 100%;
-  --popover-foreground: 258 60% 24%;
-  --popover-border: 270 14% 86%;
+  --popover-foreground: 220 70% 20%;
+  --popover-border: 220 15% 90%;
   --primary: 174 84% 40%;
   --primary-foreground: 174 10% 98%;
   --secondary: 270 14% 86%;
@@ -172,6 +176,13 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    background-image: 
+      linear-gradient(45deg, hsl(var(--primary) / 0.03) 25%, transparent 25%),
+      linear-gradient(-45deg, hsl(var(--accent) / 0.03) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, hsl(var(--primary) / 0.03) 75%),
+      linear-gradient(-45deg, transparent 75%, hsl(var(--accent) / 0.03) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
   }
 }
 

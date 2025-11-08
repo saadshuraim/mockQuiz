@@ -24,10 +24,10 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between bg-gradient-to-r from-[hsl(350,85%,45%)] to-[hsl(220,85%,45%)] bg-clip-text">
         <Link href="/">
-          <button className="flex items-center gap-2 hover-elevate px-2 py-1 rounded-md transition-all" data-testid="link-home">
+          <button className="flex items-center gap-2 hover-elevate px-3 py-2 rounded-md transition-all font-bold text-transparent" data-testid="link-home">
             <BookOpen className="h-6 w-6 text-primary" />
             <span className="font-heading font-bold text-xl text-foreground">
               MockQuiz
