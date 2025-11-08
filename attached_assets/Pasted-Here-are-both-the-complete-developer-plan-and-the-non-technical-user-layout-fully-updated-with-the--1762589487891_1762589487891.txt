@@ -1,0 +1,382 @@
+Here are both the complete developer plan and the non-technical user layout, fully updated with the "paste text" feature as the primary workflow.
+
+-----
+
+## **Part 1: The Developer Plan (Technical)**
+
+This is the full software development plan for the **MockQuiz Client-Side App**.
+
+### 🎨 **1. Visual & Branding Brief**
+
+  * **Goal:** A warm, friendly, and trustworthy look that feels modern and approachable for studying.
+  * **Palette:**
+      * Teal (`#14B8A6`) — Primary action color
+      * Deep Indigo (`#312E81`) — Headings
+      * Soft Coral (`#FF7A7A`) — Alerts, incorrect answers
+      * Warm Yellow (`#FBBF24`) — Accents, correct answers
+      * Off-white (`#FBFAFF`) — Main background
+  * **Typography:** Poppins (Bold for Headlines), Inter (Regular for Body)
+  * **UI Components:** Soft shadows, 10-12px border-radius, progress bars, and smooth micro-animations.
+
+-----
+
+### 📌 **2. Product Summary / Vision**
+
+MockQuiz is a simple, 100% client-side web application. It's fast, private, and works on mobile.
+
+  * **Core Function:** Users can:
+    1.  Get clear in-app instructions and an **AI prompt template** to generate quiz content.
+    2.  **Paste quiz text** (JSON, CSV, or TXT) directly into the app for parsing.
+    3.  (Optionally) Upload quiz files (`.json`, `.csv`, `.txt`).
+    4.  Preview, title, and save quizzes **to their browser's local storage**.
+    5.  Take quizzes with instant auto-grading and review detailed results.
+  * **Key Advantage:** No server, no accounts, 100% private.
+  * **Mitigation:** A "Backup & Restore" feature is required since `localStorage` can be cleared by the user.
+
+-----
+
+### 🗂 **3. Data Model (Client-Side Storage)**
+
+  * **Storage Mechanism:** Browser `localStorage`.
+  * **Data Keys:**
+      * `mockquiz_quizzes`: A JSON string of the `Quiz[]` array.
+      * `mockquiz_attempts`: A JSON string of the `Attempt[]` array.
+  * **JavaScript Object Structures:**
+      * **`Quiz`:** `{ id: string, title: string, description: string, questions: Question[] }`
+      * **`Question`:** `{ id: string, category?: string, level?: string, question: string, options: { [key: string]: string }, answer: string, explanation?: string }`
+      * **`Attempt`:** `{ id: string, quizId: string, quizTitle: string, finishedAt: number, score: number, answers: AttemptAnswer[] }`
+      * **`AttemptAnswer`:** `{ questionId: string, selectedKey: string, correctBool: boolean }`
+
+-----
+
+### 🛠 **4. Tech Stack**
+
+  * **Framework:** **React** (using **Vite**).
+  * **Styling:** **Tailwind CSS**.
+  * **Routing:** `react-router-dom`.
+  * **Parsing:**
+      * **JSON:** Native `JSON.parse()`.
+      * **CSV:** **`PapaParse.js`** (for in-browser parsing).
+  * **State Management:** React Context or Zustand.
+  * **Deployment:** Any static host (GitHub Pages, Netlify, Vercel).
+
+-----
+
+### 🧭 **5. Frontend Pages / UX Flow**
+
+1.  **`/` (Dashboard Page):**
+
+      * Displays lists of "My Quizzes" and "My Results" (read from `localStorage`).
+      * Primary CTA: "Create New Quiz" (links to `/upload`).
+
+2.  **`/upload` (Upload Page) — CRITICAL UX FLOW**
+
+      * This is the main entry point and must be simple. It will have a tabbed interface:
+
+      * **Tab 1: "Create & Paste" (Default):**
+
+        1.  **AI Helper:** Shows the AI prompt template and a "Copy Prompt" button.
+        2.  **Paste Box:** A large `<textarea>` with the label "Paste your quiz text here."
+        3.  **Button:** A "Preview Quiz" button. This triggers the `parseQuizText` function.
+
+      * **Tab 2: "Upload a File":**
+
+        1.  **Dropzone:** A traditional drag-and-drop file upload area.
+        2.  **Guide:** Shows the simple file format examples (JSON, CSV, TXT) for users who prefer to make files manually.
+        3.  This triggers the `parseQuizFile` function.
+
+3.  **`/preview` (Preview & Save Page):**
+
+      * **Destination:** Both "Paste" and "Upload" workflows lead here.
+      * **Function:**
+          * Displays the list of parsed questions for review.
+          * Shows any parsing errors (e.g., "Row 5: Missing 'answer' field").
+          * Provides inputs for "Title" and "Description".
+          * "Save Quiz" button (triggers `saveQuiz` in `storage.js`).
+
+4.  **`/quiz/:quizId` (Take Quiz Page):**
+
+      * Loads quiz data from `localStorage`.
+      * Presents questions, tracks answers, and shows a progress bar.
+      * "Finish" button grades the quiz and saves an `Attempt` object.
+
+5.  **`/results/:attemptId` (Result Page):**
+
+      * Loads attempt data.
+      * Shows score, time, and a per-question review (user's answer vs. correct answer).
+
+6.  **`/settings` (Settings Page):**
+
+      * "Export Data" button (triggers `exportData` in `storage.js`).
+      * "Import Data" button (Post-MVP).
+      * "Clear All Data" button (with a confirmation modal).
+
+-----
+
+### 💻 **6. Core Logic ("In-Browser Backend")**
+
+This is the key logic that powers the app, living in `src/utils/`.
+
+#### **`src/utils/storage.js` (Storage Logic)**
+
+```javascript
+const QUIZZES_KEY = 'mockquiz_quizzes';
+const ATTEMPTS_KEY = 'mockquiz_attempts';
+
+// --- Helper to get data ---
+const getStorageData = (key) => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch (err) { return []; }
+};
+
+// --- Quizzes ---
+export const getQuizzes = () => getStorageData(QUIZZES_KEY);
+export const getQuizById = (quizId) => getQuizzes().find((q) => q.id === quizId);
+
+export const saveQuiz = (quizData) => { // { title, description, questions }
+  const quizzes = getQuizzes();
+  const newQuiz = {
+    ...quizData,
+    id: crypto.randomUUID(),
+  };
+  quizzes.push(newQuiz);
+  localStorage.setItem(QUIZZES_KEY, JSON.stringify(quizzes));
+  return newQuiz;
+};
+
+// --- Attempts ---
+export const getAttempts = () => getStorageData(ATTEMPTS_KEY);
+export const getAttemptById = (attemptId) => getAttempts().find((a) => a.id === attemptId);
+
+export const saveAttempt = (attemptData) => { // { quizId, quizTitle, score, ... }
+  const attempts = getAttempts();
+  const newAttempt = {
+    ...attemptData,
+    id: crypto.randomUUID(),
+  };
+  attempts.push(newAttempt);
+  localStorage.setItem(ATTEMPTS_KEY, JSON.stringify(attempts));
+  return newAttempt;
+};
+
+// --- Backup ---
+export const exportData = () => {
+  const backupData = JSON.stringify({
+    quizzes: getQuizzes(),
+    attempts: getAttempts(),
+  }, null, 2);
+  const blob = new Blob([backupData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mockquiz_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+```
+
+#### **`src/utils/quizParser.js` (Parsing Logic)**
+
+```javascript
+import Papa from 'papaparse';
+
+/**
+ * Parses a File object from the "Upload File" tab.
+ * @param {File} file - The file object from the input.
+ * @returns {Promise<Array<Object>>} Array of Question objects.
+ */
+export const parseQuizFile = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const textContent = event.target.result;
+      // Delegate to the text parser, but add file-specific error info
+      parseQuizText(textContent)
+        .then(resolve)
+        .catch(err => reject(new Error(`Error in ${file.name}: ${err.message}`)));
+    };
+    reader.onerror = () => reject(new Error('Could not read file.'));
+    reader.readAsText(file);
+  });
+};
+
+/**
+ * Parses raw text from the "Paste Text" tab.
+ * This function "sniffs" the content to guess the format.
+ * @param {string} textContent - The raw text from the textarea.
+ * @returns {Promise<Array<Object>>} Array of Question objects.
+ */
+export const parseQuizText = (textContent) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const text = textContent.trim();
+      if (text.length === 0) {
+        return reject(new Error("Pasted text is empty."));
+      }
+
+      // --- 1. Check for JSON ---
+      if (text.startsWith('[')) {
+        try {
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) return resolve(data);
+        } catch (err) {
+          return reject(new Error(`JSON Parse Error: ${err.message}`));
+        }
+      }
+
+      // --- 2. Check for TXT ---
+      if (text.includes('---') || (text.includes('Q:') && text.includes('Answer:'))) {
+        const questions = [];
+        const blocks = text.split('---');
+        for (const block of blocks) {
+          if (block.trim().length === 0) continue;
+          const lines = block.trim().split('\n');
+          const q = { id: `q${questions.length + 1}`, options: {} };
+          lines.forEach(line => {
+            const [key, ...valueParts] = line.split(':');
+            const value = valueParts.join(':').trim();
+            if (key === 'Q') q.question = value;
+            if (key === 'A') q.options.a = value;
+            if (key === 'B') q.options.b = value;
+            if (key === 'C') q.options.c = value;
+            if (key === 'D') q.options.d = value;
+            if (key === 'Answer') q.answer = value.toLowerCase();
+            if (key === 'Explanation') q.explanation = value;
+          });
+          if (!q.question || !q.answer) {
+             return reject(new Error('Invalid TXT format. Each question must have "Q:" and "Answer:".'));
+          }
+          questions.push(q);
+        }
+        return resolve(questions);
+      }
+
+      // --- 3. Check for CSV ---
+      if (text.includes(',')) {
+        const result = Papa.parse(text, { header: true, skipEmptyLines: true });
+        if (result.errors.length) {
+          return reject(new Error(`CSV Parse Error: ${result.errors[0].message}`));
+        }
+        const questions = result.data.map((row, i) => {
+          if (!row.id || !row.question || !row.option_a || !row.answer) {
+            throw new Error(`CSV Error: Row ${i + 2} is missing required headers (id, question, option_a, answer).`);
+          }
+          const options = {};
+          if (row.option_a) options.a = row.option_a;
+          if (row.option_b) options.b = row.option_b;
+          if (row.option_c) options.c = row.option_c;
+          if (row.option_d) options.d = row.option_d;
+          return {
+            id: row.id,
+            question: row.question,
+            options: options,
+            answer: row.answer,
+            explanation: row.explanation || '',
+          };
+        });
+        return resolve(questions);
+      }
+
+      // --- 4. No Match ---
+      reject(new Error("Could not detect format. Please paste valid JSON, CSV, or our Simple TXT format."));
+
+    } catch (err) {
+      reject(new Error(`Parsing failed: ${err.message}`));
+    }
+  });
+};
+```
+
+-----
+
+### 📦 **7. Roadmap (MVP)**
+
+1.  **Project Setup:** Init React (Vite) + Tailwind + `react-router-dom`.
+2.  **Storage:** Build and test all `storage.js` utility functions.
+3.  **Parsing:** Build and test `parseQuizText` and `parseQuizFile` from `quizParser.js`.
+4.  **Core Flow (Part 1):**
+      * Build the new, tabbed **Upload Page** (`/upload`).
+      * Wire the "Paste" text area to `parseQuizText`.
+      * Wire the "Upload" dropzone to `parseQuizFile`.
+      * Build the Preview Page (`/preview`) and wire it to `saveQuiz`.
+5.  **Core Flow (Part 2):**
+      * Build the Dashboard (`/`) to read from `getQuizzes` and `getAttempts`.
+6.  **Quiz Engine:**
+      * Build the Take Quiz Page (`/quiz/:quizId`).
+      * Build the grading logic and wire it to `saveAttempt`.
+      * Build the Results Page (`/results/:attemptId`).
+7.  **Backup:** Build the Settings page (`/settings`) with the `exportData` function.
+8.  **Styling & Mobile:** Do a full pass to ensure the app is responsive.
+9.  **Launch:** Deploy to GitHub Pages or Netlify.
+
+-----
+
+### 🎯 **8. Future Enhancements (Post-MVP)**
+
+  * **Import Data:** Build the "Import" feature to read the backup `.json` file.
+  * **PDF Parsing:** Implement `pdf.js` as a "beta" feature.
+  * **Quiz Editing:** Allow users to edit a quiz *after* it has been saved.
+  * **PWA:** Convert the app to a Progressive Web App (PWA) for full offline use.
+
+-----
+
+-----
+
+-----
+
+## **Part 2: The Non-Technical Layout (For the End-User)**
+
+This is the text for an "About" page or a "How It Works" guide within the app.
+
+### **Welcome to MockQuiz\! 👋**
+
+MockQuiz is your own private, simple tool for turning notes, book chapters, or any topic into a test you can take right on your phone or computer.
+
+### **Why Use MockQuiz?**
+
+  * `✨` **No Account Needed:** Just open the app and start.
+  * `🔒` **100% Private:** Your quizzes and scores are saved *only* on your own device. We can't see them.
+  * `📱` **Works Anywhere:** It works perfectly in your computer or mobile browser, even offline.
+  * `⏱️` **Instant Feedback:** Get your scores right away and see explanations for each answer.
+
+-----
+
+### **How to Make Your First Quiz (The Easy Way)**
+
+It's a simple **Copy & Paste**.
+
+#### **Step 1: Get Your Quiz Text**
+
+We recommend using an AI (like Gemini, ChatGPT, etc.) to instantly create a quiz.
+
+Just go to the **"Create New Quiz"** page, where you'll find our AI prompt template. Click the **"Copy Prompt"** button and paste it into your favorite AI.
+
+The AI will give you a block of text. **Just copy that entire text block.**
+
+#### **Step 2: Paste Your Quiz Text**
+
+Come back to MockQuiz and paste that text directly into the big text box on the **"Create & Paste"** tab.
+
+#### **Step 3: Preview & Save**
+
+Hit the **"Preview Quiz"** button. We'll read the text, show you the questions, and let you add a title. Click "Save," and your quiz is ready to take\!
+
+-----
+
+### **For Advanced Users: The "Upload a File" Tab**
+
+If you prefer to make your own files, you can\!
+
+On the "Upload a File" tab, you'll find templates for creating your own `.json`, `.csv`, or `.txt` files. This is great if you already have quizzes in a spreadsheet or a text document.
+
+-----
+
+### **A Quick Note on Your Privacy (And Backups\!)**
+
+To keep your data 100% private, MockQuiz saves everything **only in your browser**.
+
+This means your quizzes are safe and secure *on your device*. It also means that if you clear your browser's cache or history, your saved quizzes might be erased.
+
+**We strongly recommend** going to the **"Settings"** page and clicking **"Export Data"** every once in a while. This will save a single backup file of all your quizzes to your computer.
