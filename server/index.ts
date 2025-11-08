@@ -46,35 +46,38 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// Setup error handling
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ message });
+});
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+// Initialize the app with routes and middleware
+const init = async () => {
+  await registerRoutes(app);
 
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // Setup API routes first
-  if (app.get("env") === "development") {
-    // Setup Vite's dev and HMR middleware
+  if (process.env.NODE_ENV === "development") {
+    const server = await import('http').then(http => http.createServer(app));
     await setupVite(app, server);
+    
+    const port = parseInt(process.env.PORT || '5000', 10);
+    server.listen({
+      port,
+      host: "localhost",
+    }, () => {
+      log(`serving on port ${port}`);
+    });
   } else {
-    // Serve static files in production
+    // In production on Vercel, just serve the API
     serveStatic(app);
   }
+};
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "localhost",
-  }, () => {
-    log(`serving on port ${port}`);
-  });
-})();
+// Initialize in development, skip in production (Vercel)
+if (process.env.NODE_ENV === "development") {
+  init().catch(console.error);
+}
+
+// Export the Express app as a serverless handler
+export default app;
